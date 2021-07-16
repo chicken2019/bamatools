@@ -1,0 +1,1 @@
+# this is all about initializing the web3 instance for global use
