@@ -4,10 +4,6 @@ import bama3
 from token3 import Token
 from contract import Contract
 
-router_address = '0x10ed43c718714eb63d5aa57b78b54704e256024e'
-factory_address = '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73'
-bnb_address = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
-
 bnb = Token(bnb_address)
 
 class PancakeRouter(Contract):
