@@ -2,12 +2,12 @@
 
 import json
 
-from contract import Contract
-import bama3
+from .contract import Contract
+from . import abis 
 
 class Token(Contract):
 	def __init__(self, contract_address='', **kwargs):
-		super().__init__(contract_address, kwargs.get('abi') or Bama3.erc20_abi)
+		super().__init__(contract_address, kwargs.get('abi') or abis.erc20)
 		if kwargs.get('load'):
 			self._load()
 
@@ -43,10 +43,9 @@ class Token(Contract):
 		return self._supply
 
 
-
 class ERC20Token(Token):
 	def __init__(self, contract_address, *args, **kwargs):
-		super().__init__(ca, abi=Bama3.erc20_abi, load=True)
+		super().__init__(ca, abi=abis.erc20, load=True)
 
 
 class WalletToken(Token):
@@ -73,14 +72,6 @@ class WalletToken(Token):
     @address.setter
     def address(self, address: str) -> None:
         self._address = address
-
-
-    def update_balance(self):
-        # balance = wallet_token.contract_instance.functions.balanceOf(
-            # self._address).call()
-        balance = bama3.Bama3.get_token_balance(self)
-        self._balance = balance
-
 
     def __repr__(self):
         return f'WalletToken({self._contract_address})'

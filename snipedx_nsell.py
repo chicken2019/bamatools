@@ -1,6 +1,5 @@
-# sniper bot , takes in a contract address 
-# monitor all activity involving the contract
-# address and filter out liquidity 
+# snipes into a dxsale presale 
+# and immediately switches to sell upon liquidity
 
 # self question 
 # can web3 get pending receipt using block number 
@@ -321,24 +320,19 @@ if __name__ == '__main__':
 		input('<enter> to proceed forcefully .. ')
 		
 
-	# print('(info) Checking Spending approval for pancake Router on contract .. ')
-	# tx = Bama3.approve(
-	# 	token_address, 
-	# 	wallet_address, 
-	# 	web3.Web3.toChecksumAddress(router_address), 
-	# 	private_key=private_key
-	# )
-	# print(f'(debug) approve tx: {tx}')
+	print('(info) Checking Spending approval for pancake Router on contract .. ')
+	tx = Bama3.approve(token_address, wallet_address, router_address, private_key=private_key)
+	print(f'(debug) approve tx: {tx}')
 
 	print('(INFO) Initializing Router .. ', end='', flush=True)
 	_router = PancakeRouter()
 	print(':)')
 
 	print('(info) Preparing to MAke purchase .. ')
-	# tx_hash = _router.buy(token_address, amount_in_bnb, wallet_address, private_key)
-	# if tx_hash:
-		# print(f'(info) Tx Hash: ', tx_hash)
-
+	tx_hash = _router.buy(token_address, amount_in_bnb, wallet_address='', private_key='')
+	if tx_hash:
+		print(f'(info) Tx Hash: ', tx_hash
+			
 	# can the transaction status be checked
 	# wb3.eth.get_transaction(tx_hash); if ftx['status'] == '' ... 
-	# input('<enter> to quit !')
+	input('<enter> to quit !')

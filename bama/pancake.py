@@ -1,15 +1,14 @@
 # $5
 from web3 import Web3
-import bama3
-from token3 import Token
-from contract import Contract
-
-bnb = Token(bnb_address)
+from . import abis
+from . import token3
+from .contract import Contract
+from .tokens import bnb
 
 class PancakeRouter(Contract):
 	def __init__(self):
 		self._ca = router_address
-		super().__init__(self._ca, abi=Bama3.pancakerouter_abi)
+		super().__init__(self._ca, abi=abis.pancakerouter)
 
 	def buy(self, token_address, amount_in_bnb, wallet_address='', private_key=''):
 		nonce = wb3.eth.get_transaction_count(wallet_address)
@@ -72,7 +71,7 @@ class PancakeFactory(Contract):
 
 class PancakePair(Token):
 	def __init__(self, ca):
-		super().__init__(ca, abi=Bama3.pancakelp_abi)
+		super().__init__(ca, abi=abis.pancakelp)
 		self._ca = ca
 		self._balance = 0
 		

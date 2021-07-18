@@ -1,14 +1,15 @@
 from web3 import Web3
-import bama3
-import blockexplorer
+from . import blockexplorer
+from . import bama33
 
+bama_utils = bama33.W3Util
 explorer = blockexplorer.BlockExplorer()
 
 class Contract(object):
 	def __init__(self, contract_address, abi=''):
 		self._contract_address = contract_address
-		self._contract_instance = bama3.contract(contract_address, abi or explorer.get_contract_abi(contract_address))
-		self._abi = self.contract_instance.abi
+		# self._contract_instance = bama33.bama_utils.contract(contract_address, abi or explorer.get_contract_abi(contract_address))
+		# self._abi = self.contract_instance.abi
 
 	@property
 	def contract_address(self):
@@ -35,8 +36,3 @@ class Contract(object):
 
 	def __str__(self):
 		return f'{self._contract_address})'
-
-
-	# def call_function(function_name, *args):
-		# balance = wallet_token.contract_instance.functions.balanceOf(*args).call()
-		

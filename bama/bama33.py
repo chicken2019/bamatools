@@ -1,7 +1,15 @@
 # bama33 
 # the renounced file .. the main chef .. the cordinator 
 import web3
-from ..common import abis
+import abis
+from .pancake import PancakePair
+
+from web3 import Web3
+from web3.middleware import geth_poa_middleware
+
+wb3 = web3.Web3(web3.Web3.HTTPProvider('https://bsc-dataseed.binance.org/'))
+wb3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
 
 class W3Util(object):
 	def __init__(self, w3):
@@ -70,8 +78,6 @@ class W3Util(object):
 
 
 
-
-
 class LiquidityTransaction(object):
 	'''
 		What does this even do . 
@@ -85,7 +91,7 @@ class LiquidityTransaction(object):
 	
 	def __init__(self, txh):
 		self._tx = None
-		self._hash = txh # the transaction hash itself
+		self._tx_hash = txh # the transaction hash itself
 		self._block = 0
 		self._logs_count = 0
 		self._initiator = ''
@@ -99,7 +105,7 @@ class LiquidityTransaction(object):
 	def _init(self):
 		'''
 		'''
-		self._tx = wb3.eth.get_transaction(self._hash)
+		self._tx = wb3.eth.get_transaction(self._tx_hash)
 		self._extract_data()
 
 
@@ -108,7 +114,7 @@ class LiquidityTransaction(object):
 		'''
 		Returns True if transaction is one involving liquidity
 		'''
-		return self._tx.input.startswith(self.LIQUIDTY_FUNCTION_IDENT):
+		return self._tx.input.startswith(self.LIQUIDTY_FUNCTION_IDENT)
 
 		
 
@@ -126,7 +132,7 @@ class LiquidityTransaction(object):
 	@property
 	def receipt(self):
 		if not self._receipt:
-			self._receipt = wb3.eth.get_transaction_receipt(self._tx)
+			self._receipt = wb3.eth.get_transaction_receipt(self._tx_hash)
 		return self._receipt
 
 
@@ -145,6 +151,8 @@ class LiquidityTransaction(object):
 					data_value = int(event.data, 16)/10**18
 					if data_value > 1:
 						self._pair_address = event.address
+						if self._pair_address:
+							self._pair_token = PancakePair(self._pair_address)
 						self._minted = data_value
 
 

@@ -15,7 +15,6 @@ wb3 = web3.Web3(web3.Web3.HTTPProvider('https://bsc-dataseed.binance.org/'))
 wb3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
 abi_folder = 'abis'
-
 # 
 router_address = '0x10ed43c718714eb63d5aa57b78b54704e256024e'
 factory_address = '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73'
@@ -136,7 +135,44 @@ class Contract(object):
 
 class Token(Contract):
 	def __init__(self, contract_address='', **kwargs):
-		super().__init__(contract_address, kwargs.get('abi') or bama3.erc20_abi)
+		super().__init__(contract_address, kwargs.get('abi') or Bama3.erc20_abi)
+		# if kwargs.get('load'):
+		self._load()
+
+	def _load(self):
+		print('_loading_token_info ..')
+		self._name = self.contract_instance.functions.name().call()
+		self._symbol = self.contract_instance.functions.symbol().call()
+		self._decimals = self.contract_instance.functions.decimals().call()
+		self._supply = self.contract_instance.functions.totalSupply().call()
+
+	# def __bool__(self):
+	# 	return self._is_token
+
+	def __repr__(self):
+		return f'Token( {self._contract_address} )'
+
+	def __eq__(self, other):
+		return self.contract_address == other.contract_address
+
+	def balance(self, account):
+		return self.contract_instance.functions.balanceOf(account).call()
+
+	@property
+	def symbol(self):
+		return self._symbol
+
+	@property
+	def name(self):
+		return self._name
+
+	@property
+	def decimals(self):
+		return self._decimals
+
+	@property
+	def total_supply(self):
+		return self._supply
 
 
 class PancakePair(Token):
@@ -212,16 +248,16 @@ class PancakeRouter(Contract):
 			return wb3.toHex(tx_token)
 
 
-	def buy(self, token_address, amount_in_bnb, wallet_address='', private_key=''):
+	def sell(self, token_address, token_amount, wallet_address='', private_key=''):
 		nonce = wb3.eth.get_transaction_count(wallet_address)
-		new_txn = _router.contract_instance.functions.swapExactETHForTokensSupportingFeeOnTransferTokens(
-		0, # amount Out Min 
-		[web3.Web3.toChecksumAddress(bnb_address), token_address], # path 
-		wallet_address, 
-		int(time.time())+10000 # now + 10 seconds
+		new_txn = _router.contract_instance.functions.swapExactTokensForETHSupportingFeeOnTransferTokens(
+			token_amount, # convert to raw 
+			0, # amount Out Min 
+			[token_address, web3.Web3.toChecksumAddress(bnb_address)], # path 
+			wallet_address, 
+			int(time.time())+10000 # now + 10 seconds
 		).buildTransaction({
 			'from': wallet_address, 
-			'value': wb3.toWei(amount_in_bnb, 'ether'), 
 			'gas': 400000, 
 			'gasPrice': wb3.toWei('8', 'gwei'),
 			'nonce': nonce
@@ -254,24 +290,7 @@ def await_liquidity_pair(token_address):
 
 
 if __name__ == '__main__':
-	# the amount of token to buy in bnb
-	
-	while True:
-		try:	
-			amount_in_bnb = input('Enter amount to buy in BNB: (e.g 0.001): ')
-			float(amount_in_bnb)
-		except ValueError:
-			print('Invalid amount .. ')
-		else:
-			break
-
-	# the token contract address
-	try:
-		token_address = web3.Web3.toChecksumAddress(input('Enter Token Address: '))
-	except Exception as ex:
-		print(f'(Error) {ex}')
-		exit()
-
+	# the amount of token to sell in bnb
 
 	print('(info) Loading account .. ')
 	private_key = open('private.key').read().strip()
@@ -283,15 +302,38 @@ if __name__ == '__main__':
 
 	# the user's wallet derived from the private key 
 	account = wb3.eth.account.from_key(private_key)
-	
 	# derive users address from imported account 
 	wallet_address = web3.Web3.toChecksumAddress(account.address)
-	print(f'(info) Account der from key: {wallet_address}')
+	print(f'(info) Account derv from key: {wallet_address}')
 	
 	# get some balance 
 	wallet_balance = wb3.eth.get_balance(wallet_address)
-	print(f'(info) Balance: {round(wallet_balance/10**18, 4)}')
+	print(f'(info) Balance: {round(wallet_balance/10**18, 4)} BNB')
 	
+
+	# the token contract address
+	while True:
+		try:
+			token_address = web3.Web3.toChecksumAddress(input('Enter Token Address: '))
+			# make a contract out of the token address
+			token_object = Token(token_address)
+		except Exception as ex:
+			print(f'(Error) {ex}')
+			continue
+
+		try:
+			sell_percent = int(input('Enter token percent to sell: '))
+		except ValueError:
+			print('Invalid percent entered !!')
+			continue
+
+		break
+
+	token_balance = token_object.balance(wallet_address)
+	token_amount = int(token_balance * (sell_percent/100))
+	print(f'Token Balance: {token_balance/10**token_object.decimals} {token_object.symbol}')
+	print(f'Token to sell: {token_amount/10**token_object.decimals} {token_object.symbol}')
+
 	# pancake factory 
 	print('(INFO) Initializing FActory .. ', end='', flush=True)
 	_factory = PancakeFactory()
@@ -306,12 +348,13 @@ if __name__ == '__main__':
 	print(f'(info) Initializing Pair contract at [{lp_address}]')
 	pair_contract = PancakePair(lp_address)
 
+
 	while True:
 		print('(inFo) Waiting for Mint operation .. ')
 		pair_balance = pair_contract.balance()/10**18
 		print('(debug) ', pair_balance)
 		if pair_balance > 0:
-			print('(info) Liquidity has been minteD .. proceeding to pBuy')
+			print('(info) Liquidity has been minteD .. proceeding to SELL')
 			break
 
 		time.sleep(5)
@@ -319,26 +362,23 @@ if __name__ == '__main__':
 	if pair_balance > 0 and pair_balance < 1:
 		print('(warning) Token has been rug pulled ! :( :( :(')
 		input('<enter> to proceed forcefully .. ')
-		
 
-	# print('(info) Checking Spending approval for pancake Router on contract .. ')
-	# tx = Bama3.approve(
-	# 	token_address, 
-	# 	wallet_address, 
-	# 	web3.Web3.toChecksumAddress(router_address), 
-	# 	private_key=private_key
-	# )
-	# print(f'(debug) approve tx: {tx}')
+	print('(info) Checking Spending approval for pancake Router on contract .. ')
+	tx = Bama3.approve(token_address, wallet_address, router_address, private_key=private_key)
+	print(f'(debug) approve tx: {tx}')	
 
 	print('(INFO) Initializing Router .. ', end='', flush=True)
 	_router = PancakeRouter()
 	print(':)')
 
-	print('(info) Preparing to MAke purchase .. ')
-	# tx_hash = _router.buy(token_address, amount_in_bnb, wallet_address, private_key)
-	# if tx_hash:
-		# print(f'(info) Tx Hash: ', tx_hash)
+	input('<enter> to proceed 1.')	
+	input('<enter> to proceed 2.')	
 
+	print('(info) Preparing to MAke Selloff.. ')	
+	tx_hash = _router.sell(token_address, token_amount, wallet_address, private_key)
+	if tx_hash:
+		print(f'(info) Tx Hash: ', tx_hash)
+			
 	# can the transaction status be checked
 	# wb3.eth.get_transaction(tx_hash); if ftx['status'] == '' ... 
-	# input('<enter> to quit !')
+	input('<enter> to quit !')

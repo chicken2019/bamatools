@@ -1,4 +1,0 @@
-factory_address = '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73'
-bnb_address = '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c'
-router_address = '0x10ed43c718714eb63d5aa57b78b54704e256024e'
-cake_cake_lp = '0x0ed7e52944161450477ee417de9cd3a859b14fd0'

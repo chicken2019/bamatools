@@ -1,7 +1,107 @@
+import os
+import json
 import datetime
-from token3 import Token 
-from contract import Contract
+import web3
 import dxsnipeabi
+
+from web3 import Web3
+from web3.middleware import geth_poa_middleware
+
+wb3 = web3.Web3(web3.Web3.HTTPProvider('https://bsc-dataseed.binance.org/'))
+wb3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+abi_folder = 'abis'
+
+class Bama3:
+    pancakelp_abi = json.load(open(os.path.join(abi_folder, 'pancakelp.abi')))
+    pancakefactory_abi = json.load(open(os.path.join(abi_folder, 'pancakefactory.abi')))
+    pancakerouter_abi = json.load(open(os.path.join(abi_folder, 'pancakerouter.abi')))
+    erc20_abi = json.load(open(os.path.join(abi_folder, 'erc20.abi')))
+
+    @staticmethod
+    def contract(contract_address, abi):
+        _abi = abi 
+        if _abi:
+            contract_instance = wb3.eth.contract(
+                address=web3.Web3.toChecksumAddress(contract_address),
+                abi=_abi)
+            return contract_instance
+
+
+class Contract(object):
+    def __init__(self, contract_address, abi=''):
+        self._contract_address = contract_address
+        self._contract_instance = Bama3.contract(contract_address, abi or '')
+        self._abi = self.contract_instance.abi
+
+    @property
+    def contract_address(self):
+        return Web3.toChecksumAddress(self._contract_address)
+
+    @contract_address.setter
+    def contract_address(self, contract_address: str) -> None:
+        self._contract_address = contract_address
+
+    @property
+    def contract_instance(self):
+        return self._contract_instance
+
+    @property
+    def ca(self):
+        return self._contract_address
+
+    @property
+    def abi(self):
+        return self._abi
+
+    def __repr__(self):
+        return f'Contract({self._contract_address})'
+
+    def __str__(self):
+        return f'{self._contract_address})'
+
+
+class Token(Contract):
+    def __init__(self, contract_address='', **kwargs):
+        super().__init__(contract_address, kwargs.get('abi') or Bama3.erc20_abi)
+        # if kwargs.get('load'):
+        self._load()
+
+    def _load(self):
+        print('_loading_token_info ..')
+        self._name = self.contract_instance.functions.name().call()
+        self._symbol = self.contract_instance.functions.symbol().call()
+        self._decimals = self.contract_instance.functions.decimals().call()
+        self._supply = self.contract_instance.functions.totalSupply().call()
+
+    # def __bool__(self):
+    #   return self._is_token
+
+    def __repr__(self):
+        return f'Token( {self._contract_address} )'
+
+    def __eq__(self, other):
+        return self.contract_address == other.contract_address
+
+    def balance(self, account):
+        return self.contract_instance.functions.balanceOf(account).call()
+
+    @property
+    def symbol(self):
+        return self._symbol
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def decimals(self):
+        return self._decimals
+
+    @property
+    def total_supply(self):
+        return self._supply
+
 
 class DxPresale(Contract):
     def __init__(self, address, w3=None):
@@ -9,7 +109,7 @@ class DxPresale(Contract):
         assert w3 != None
         self._w3 = w3
         self._token_address = ''
-        self._presale_address = address
+        self._presale_address = web3.Web3.toChecksumAddress(address)
         self._token = None
         self._min = 0
         self._max = 0
@@ -53,16 +153,27 @@ class DxPresale(Contract):
         txn = {
             'from': wallet_address, 
             'value': self._w3.toWei(amount_in_bnb, 'ether'), 
-            'gas': 400000, 
+            'gas': 100000, 
             'gasPrice': self._w3.eth.gas_price,
             'nonce': nonce,
             'to': self._presale_address
         }
         print(f'(info) Signing transaction ..  ')
         signed_txn = self._w3.eth.account.sign_transaction(txn, private_key=private_key)
-        tx_token = self._w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-        print(tx_token)
-        input('<enter> to proceed !')
+        # while True:
+        try:
+            print('(info) Broadcasting transaction')
+            tx_token = self._w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+        except ValueError as ex:
+            print(f'(err) {ex}')
+            input('Tap <enter> to rebroadcast transaction .. ')
+            # continue
+        # else:
+        #     break
+
+        tx_hash = self._w3.toHex(tx_token)
+        print(f'Transaction Hash: {tx_hash}')
+        return tx_token
 
     def display(self):
         '''
