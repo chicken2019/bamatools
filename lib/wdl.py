@@ -51,23 +51,9 @@ class WDL(object):
 						'dst': router_address
 					})
 				entries = router_bnb_deposit_filter.get_new_entries()
-
-			# print('.', end='')
 			
 			for e in entries:
 				self._events_queue.put(e)
-
-			# renew the var filter every 5 usage 
-			# cnt += 1
-			# if cnt == 2:
-			# 	print('[INFO] Renewing Filter ')
-			# 	router_bnb_deposit_filter = pancake.bnb.contract_instance.events.Deposit().createFilter(
-			# 		fromBlock='latest', 
-			# 		argument_filters={
-			# 			'dst': router_address
-			# 		})
-			# 	cnt = 0
-
 
 	def probe(self, ):
 		print('Starting probe thread .. ', end='')  # debug

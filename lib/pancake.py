@@ -9,7 +9,51 @@ bnb = Token(bnb_address)
 class PancakeRouter(Contract):
 	def __init__(self):
 		self._ca = router_address
-		super().__init__(self._ca)
+		super().__init__(self._ca, abi=Bama3.pancakerouter_abi)
+
+	def buy(self, token_address, amount_in_bnb, wallet_address='', private_key=''):
+		nonce = wb3.eth.get_transaction_count(wallet_address)
+		self.contract_instance.functions.swapExactETHForTokens(
+			amount_in_bnb, # amountIn 
+			0, # amount Out Min 
+			[bnb_address, token_address], # path 
+			wallet_address, # to 
+			int(time.time())+1000# deadline 
+			).buildTransaction({
+				'from': wallet_address, 
+				'value': wb3.toWei(amount_in_bnb, 'ether'), 
+				'gas': 250000, 
+				'gasPrice': wb3.toWei('5', 'gwei'),
+				'nonce': nonce
+			})
+
+		signed_txn = wb3.eth.account.sign_transaction(new_txn, private_key='')
+		tx_token = wb3.eth.send_raw_transaction(signed_txn.rawTransaction)
+		if tx_token:
+			return wb3.toHex(tx_token)
+
+
+	def sell(self, token_address, percent=100, wallet_address='', private_key=''):
+		nonce = wb3.eth.get_transaction_count(wallet_address)
+		new_txn = _router.contract_instance.functions.swapExactETHForTokensSupportingFeeOnTransferTokens(
+		0, # amount Out Min 
+		[web3.Web3.toChecksumAddress(bnb_address), token_address], # path 
+		wallet_address, 
+		int(time.time())+10000 # now + 10 seconds
+		).buildTransaction({
+			'from': wallet_address, 
+			'value': wb3.toWei(amount_in_bnb, 'ether'), 
+			'gas': 400000, 
+			'gasPrice': wb3.toWei('8', 'gwei'),
+			'nonce': nonce
+		})
+
+		print(f'(info) Signing transaction ..  ')
+		signed_txn = wb3.eth.account.sign_transaction(new_txn, private_key=private_key)
+		print(f'(info) Broadcasting transaction to chain..  ')
+		tx_token = wb3.eth.send_raw_transaction(signed_txn.rawTransaction)
+		if tx_token:
+			return wb3.toHex(tx_token)
 
 
 
@@ -24,6 +68,20 @@ class PancakeFactory(Contract):
 				Web3.toChecksumAddress(bnb_address)
 			).call()
 		return pair 
+
+
+class PancakePair(Token):
+	def __init__(self, ca):
+		super().__init__(ca, abi=Bama3.pancakelp_abi)
+		self._ca = ca
+		self._balance = 0
+		
+	def total_supply(self): 
+		self._supply = self.contract_instance.functions.totalSupply().call()		
+		return self._supply
+
+	def __repr__(self):
+		return f'PancakePair( {self.contract_address} )'
 
 
 class PancakePair(Token):

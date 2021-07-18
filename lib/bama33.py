@@ -1,5 +1,76 @@
 # bama33 
 # the renounced file .. the main chef .. the cordinator 
+import web3
+from ..common import abis
+
+class W3Util(object):
+	def __init__(self, w3):
+		self._w3 = w3
+
+	def contract(self, contract_address, abi):
+		_abi = abi 
+		if _abi:
+			contract_instance = self._w3.eth.contract(
+				address=web3.Web3.toChecksumAddress(contract_address),
+				abi=_abi)
+			return contract_instance
+
+
+	@staticmethod
+	def get_ca_from_input(txi):
+		# function length = 10, address length = 40
+		return ''.join(['0x', txi[10:10+64][64-40:]])
+
+	def private_key_from_mnemonics(self, mnemonics):
+		return self._w3.eth.account.from_mnemonic(mnemonics).privateKey.hex()
+
+	
+	def is_approve(self, token_address, spender_address):
+		token_contract = self.contract(token_address, abis.erc20_abi)
+		allowance = token_contract.functions.allowance(
+			wallet_address, 
+			web3.Web3.toChecksumAddress(spender_address)
+		).call()
+		allowance = allowance/10**18
+		return allowance > 1
+
+
+	def approve(self, token_address, wallet_address, spender_address, private_key=''):
+		
+		# confirm the private key passed 
+		if not private_key:
+			return 
+
+		# make a contract object from the token address 
+		token_contract = self.contract(token_address, abis.erc20_abi)
+		allowance = token_contract.functions.allowance(
+			wallet_address, 
+			web3.Web3.toChecksumAddress(spender_address)
+		).call()
+		allowance = allowance/10**18
+
+		print('(debug) allowance: ', allowance)
+		if allowance > 1:
+			print('(info) Approval Allowance confirmed . ')
+			return allowance
+
+		nonce = self._w3.eth.get_transaction_count(wallet_address)
+		tx = token_contract.functions.approve(spender_address, self._w3.toWei(2**64-1,'ether')
+		).buildTransaction({
+			'from': wallet_address,
+			'nonce': nonce
+		})
+		
+		# signed the transaction
+		signed_txn = self._w3.eth.account.sign_transaction(tx, private_key)
+
+		# broadcase the signed transaction 
+		tx_hash = self._w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+		return tx_hash
+
+
+
+
 
 class LiquidityTransaction(object):
 	'''
@@ -33,11 +104,12 @@ class LiquidityTransaction(object):
 
 
 	@staticmethod
-	def is_liquidity_transaction(transaction_hash):
+	def is_liquidity_transaction(self):
 		'''
 		Returns True if transaction is one involving liquidity
 		'''
 		return self._tx.input.startswith(self.LIQUIDTY_FUNCTION_IDENT):
+
 		
 
 	def is_first_liquidity(self):
