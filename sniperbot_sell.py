@@ -181,10 +181,18 @@ class PancakePair(Token):
 		self._ca = ca
 		self._balance = 0
 		
+	
 	def balance(self): 
-		self._balance = self.contract_instance.functions.totalSupply().call()		
+		if not self._balance:
+			while True:
+				try:
+					self._balance = self.contract_instance.functions.totalSupply().call()		
+				except Exception as ex:
+					print(f'{ex}')
+				else:
+					break
 		return self._balance
-
+		
 	def __repr__(self):
 		return f'PancakePair( {self.contract_address} )'
 

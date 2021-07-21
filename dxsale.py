@@ -201,7 +201,8 @@ class DxPresale(Contract):
         print(f'Transaction Hash: {tx_hash}')
         return tx_token
 
-    def display(self):
+
+    def _display(self):
         '''
         Displays all possible info that can be known 
         about the presale . including the token info 
@@ -233,6 +234,13 @@ class DxPresale(Contract):
         print('_'*30)
 
 
+    def display(self):
+        try:
+            self._display()
+        except Exception as ex:
+            print(f'(Display): {ex}')
+
+
     @property
     def token(self):
         '''
@@ -245,17 +253,20 @@ class DxPresale(Contract):
         
         return self._token
 
+
     @property
     def start_time(self):
         if isinstance(self._start_time, int):
             self._start_time = datetime.datetime.fromtimestamp(self._start_time)
         return self._start_time
 
+
     @property
     def end_time(self):
         if isinstance(self._end_time, int):
             self._end_time = datetime.datetime.fromtimestamp(self._end_time)
         return self._end_time
+
 
     @property
     def goal(self):

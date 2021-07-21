@@ -146,7 +146,14 @@ class PancakePair(Token):
 		self._balance = 0
 		
 	def balance(self): 
-		self._balance = self.contract_instance.functions.totalSupply().call()		
+		if not self._balance:
+			while True:
+				try:
+					self._balance = self.contract_instance.functions.totalSupply().call()		
+				except Exception as ex:
+					print(f'{ex}')
+				else:
+					break
 		return self._balance
 
 	def __repr__(self):
@@ -267,9 +274,10 @@ if __name__ == '__main__':
 
 	# the token contract address
 	try:
-		token_address = web3.Web3.toChecksumAddress(input('Enter Token Address: '))
+		token_address = input('Enter Token Address: ')
+		token_address = web3.Web3.toChecksumAddress(token_address.strip())
 	except Exception as ex:
-		print(f'(Error) {ex}')
+		print(f'(tk : Error) {ex}')
 		exit()
 
 
