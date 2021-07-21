@@ -275,6 +275,7 @@ class LiquidityTransaction(object):
 		'''
 			Extract 
 		'''
+		print(self.receipt)
 		self._logs_count = len(self.receipt.logs)
 		for event in self.receipt.logs:
 			if event.topics[0].hex().endswith('523b3ef'):
@@ -354,7 +355,7 @@ class WDL(object):
 				router_bnb_deposit_filter = WBNB.contract_instance.events.Deposit().createFilter(
 					fromBlock='latest', 
 					argument_filters={
-						'dst': router_address
+						'dst': addresses.ROUTER
 					})
 				entries = router_bnb_deposit_filter.get_new_entries()
 			
@@ -379,7 +380,7 @@ class WDL(object):
 				tx = self._is_liquidity_transaction(_tnx_hash)
 				if tx:
 					print(_tnx_hash, 'Cost:',  _bnb_amount)
-					self._callback(_tnx_hash, _bnb_amount)
+					self._callback(LiquidityTransaction(_tnx_hash), _bnb_amount)
 
 
 	def _filter_liquidity_thread(self, ):

@@ -7,6 +7,9 @@ import dxsnipeabi
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 
+import dxsale
+
+
 wb3 = web3.Web3(web3.Web3.HTTPProvider('https://bsc-dataseed.binance.org/'))
 wb3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
@@ -103,10 +106,26 @@ class Token(Contract):
         return self._supply
 
 
+import dxdeployerabi
+
+class DxDeployer(Contract):
+    def __init__(self, address, w3=None):
+        super().__init__(address, dxdeployerabi.abi)
+
+    def presale_owner_to_index(self, owner):
+        idx = self._contract_instance.functions.presaleOwnerToIndex(owner).call()
+
+    def __str__(self):
+        return f'DxDeployer({self.ca})'
+
+
 class DxPresale(Contract):
+    DEPLOYER_ADDRESS ='0xc5fE280422117461af9b953Da413e9627E3b9a40'
+    
     def __init__(self, address, w3=None):
         super().__init__(address, dxsnipeabi.abi)
         assert w3 != None
+        self._deployer = DxDeployer(self.DEPLOYER_ADDRESS)
         self._w3 = w3
         self._token_address = ''
         self._presale_address = web3.Web3.toChecksumAddress(address)
@@ -119,6 +138,9 @@ class DxPresale(Contract):
         self._end_time = 0
         self._called_init = False
         self._raised = 0
+        self._rate = 0
+        self._closed = False
+        self._owner = ''
         self._init()
 
 
@@ -137,6 +159,10 @@ class DxPresale(Contract):
         self._start_time = self._contract_instance.functions.presaleStartTime().call()
         self._end_time = self._contract_instance.functions.presaleEndTime().call()
         self._raised = self._contract_instance.functions.CheckTotalEthRaised().call()
+        self._rate = self._contract_instance.functions.rate().call()
+        self._closed = self._contract_instance.functions.hasClosed().call()
+        self._owner = self._contract_instance.functions.owner().call()
+        self._presale_id = self._deployer.presale_owner_to_index(self._owner)
 
 
     def snipe(self, amount_in_bnb, private_key):
@@ -183,14 +209,17 @@ class DxPresale(Contract):
         '''
         assert self._called_init == True
 
-        print('\n'*2)
+        print()
         print('_'*70)
         print('Token Info: ')
         print(f'Name: {self.token.name}')
         print(f'Symbol: {self.token.symbol}')
+        print(f'Supply: {self.token.total_supply}')
         print(f'Address: {self.token.ca}')
         print('_'*30)
         print(f'Presale address: {self._presale_address}')
+        print(f'Presale owner: {self._owner}')
+        print(f'Presale Id: {self._presale_id}')
         print(f'Minimum Contribution: {self.min_contribution} BNB')
         print(f'Maximum Contribution: {self.max_contribution} BNB')
         print(f'Soft Cap: {self.goal} BNB')
@@ -198,6 +227,7 @@ class DxPresale(Contract):
         print(f'Start Time: {self.start_time}')
         print(f'End Time: {self.end_time}')
         print(f'Raised: {self.raised} BNB')
+        print(f'Rate: {self.rate} {self.token.symbol} per BNB')
         print(f'Started: {self.started}')
         print(f'Ended: {self.ended}')
         print('_'*30)
@@ -248,11 +278,20 @@ class DxPresale(Contract):
         return self._raised/10**18
 
     @property
+    def rate(self):
+        return self._rate/10**self._token.decimals
+
+    @property
+    def owner(self):
+        return self._owner
+
+    @property
     def ended(self):
         '''
         returns True if presale is ended
         '''
-        return datetime.datetime.now() > self.end_time 
+        # return datetime.datetime.now() > self.end_time 
+        return self._closed
 
     @property
     def started(self):
